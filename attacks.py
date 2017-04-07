@@ -549,3 +549,4 @@ class ProportionAttack(Attack):
         if (has_match):
             has_match = self.__match_proportions(matched_elements, instance)
         return has_match
+
