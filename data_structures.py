@@ -74,6 +74,12 @@ class Trajectory(IndividualRecord):
         self.visits = insert(self.visits, index, elem)
         return self
 
+    def __repr__(self):
+        repr = str(self.id)
+        for v in self.visits:
+            repr += "," + str(v["x"]) + "," + str(v["y"]) + "," + str(v["time"])
+        return repr
+
 
 class FrequencyVector(IndividualRecord):
     """
@@ -112,6 +118,12 @@ class FrequencyVector(IndividualRecord):
         self.visits = insert(self.visits, index, elem)
         return self
 
+    def __repr__(self):
+        repr = str(self.id)
+        for v in self.visits:
+            repr += "," + str(v["x"]) + "," + str(v["y"]) + "," + str(v["freq"])
+        return repr
+
 
 class ProbabilityVector(IndividualRecord):
     """
@@ -146,5 +158,11 @@ class ProbabilityVector(IndividualRecord):
         """
         elem = (x, y, i)
         target = array(elem, dtype=self.data_type)
-        index = self.visits.size - searchsorted(self.visits["info"][::-1], target["info"], side="right")
+        index = self.visits.size - searchsorted(self.visits["prob"][::-1], target["prob"], side="right")
         self.visits = insert(self.visits, index, elem)
+
+    def __repr__(self):
+        repr = str(self.id)
+        for v in self.visits:
+            repr += "," + str(v["x"]) + "," + str(v["y"]) + "," + str(v["prob"])
+        return repr
