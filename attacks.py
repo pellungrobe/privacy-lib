@@ -550,3 +550,101 @@ class ProportionAttack(Attack):
             has_match = self.__match_proportions(matched_elements, instance)
         return has_match
 
+class HomeWorkAttack(Attack):
+    """
+    Home and work attack on frequency vectors. Each instance is made of the two most freuent locations and their frequency of
+    visit is also considered. It is also possible to specify a tolerance level.
+    """
+
+    HomeWorkK = 0
+
+    def __init__(self, tolerance):
+        """
+        Initializer for the HomeWorkAttack. Call the generic Attack initializer but adds tolerance, to allow to specify
+        the precision with which to consider the frequency of the visits during the matching. This essentially
+        modulates the power of the attack.
+
+        Parameters
+        ----------
+        k: int
+            parameter that defines the background knowledge configuration. It represents the quantity of information
+            that the adversary has. So, for example, if k = 2, the adversary will, ipothetically, know any combination
+            of the visits of a users of length 2.
+        tolerance: float
+            can be any number between 0 and 1. The tolerance is used as a percentage: each visit in the instance
+            will match if there is a visit in the individual record with the same location and that has a frequency
+            of at least the frequency of the visit in the instance times the tolerance. For instance, if the tolerance
+            is 0.9, and the frequency of the visit in the instance is 10, it will match a visit in the individual record
+            if it has the same location and at least frequency of 9.
+        """
+        super().__init__(HomeWorkAttack.HomeWorkK)
+        if tolerance < 0 or tolerance > 1:
+            raise ValueError
+        self.tolerance = tolerance
+
+    def has_matching(self, individual_record, instance):
+        """
+        The matching function for the LocationSequenceAttack.
+
+        Parameters
+        ----------
+        individual_record: IndividualRecord
+            the record against which to do the matching. It is considered a FrequencyVector.
+        instance: numpy.array[(x,y,i)]
+            the background knowledge instance on which to execute the matching.
+
+        Returns
+        -------
+        has_match: bool
+            True if the instance matches with the record, False otherwise.
+        """
+        target = len(instance)
+        number_of_visits = len(individual_record.visits)
+        count = 0
+        has_match = True
+        for i in range(0, number_of_visits):
+            record_elem = individual_record.visits[i]
+            instance_elem = instance[count]
+            samex = instance_elem["x"] == record_elem["x"]
+            samey = instance_elem["y"] == record_elem["y"]
+            f_diff = record_elem["freq"] - instance_elem["freq"] * self.tolerance
+            samef = f_diff >= 0
+            if samex and samey and samef:
+                count += 1
+            else:
+                too_few_f = f_diff < 0
+                if too_few_f:
+                    has_match = False
+                    break
+            if count == target:
+                break
+            if (number_of_visits - i) < (target - count):
+                has_match = False
+                break
+        return has_match
+
+    def risk(self, dataset, individual_record):
+        """
+        Computes the risk of reidentification of an individual with respect to a dataset. We have to override the general
+        risk calculation procedure because for the Home and Work attack we don't have to compute combinations.
+
+        Parameters
+        ----------
+        dataset: numpy.array[IndividualRecord]
+            the dataset against which to compute the privacy risk.
+        individual_record: IndividualRecord
+            the individual record of the individual of which to compute the privacy risk.
+
+        Returns
+        -------
+        risk: float
+            the privacy risk of the individual owner of the individual_record.
+        """
+        number_of_visits = len(individual_record.visits)
+        instance = (individual_record.visits[0], individual_record.visits[1])
+        risk = 0
+        arr = array(list(instance), dtype=Trajectory.data_type)
+        prob = self.__reidentification_prob(dataset, arr, individual_record.id)
+        if prob > risk:
+            risk = prob
+        return risk
